@@ -1,11 +1,11 @@
-import { StockAnalysis } from './components/StockAnalysis';
+import type { FC } from 'react';
 
-function App() {
+const App: FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <StockAnalysis />
     </div>
   );
-}
+};
 
 export default App;

@@ -1,12 +1,25 @@
-import { useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { useState, type FC } from 'react';
 
-export const StockAnalysis = () => {
+interface AnalysisData {
+  currentPrice: number;
+  fcfTargetPrice: number;
+  ddmTargetPrice: number;
+  overallScore: number;
+  factors: {
+    valuation: number;
+    risks: number;
+    unitEconomics: number;
+    customerValue: number;
+    marketSize: number;
+    competition: number;
+  };
+}
+
+export const StockAnalysis: FC = () => {
   const [ticker, setTicker] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [analysisData, setAnalysisData] = useState({
+  const [analysisData, setAnalysisData] = useState<AnalysisData>({
     currentPrice: 0,
     fcfTargetPrice: 0,
     ddmTargetPrice: 0,
@@ -32,7 +45,7 @@ export const StockAnalysis = () => {
       if (!response.ok) throw new Error('Analysis failed');
       
       const data = await response.json();
-      setAnalysisData(data);
+      setAnalysisData(data as AnalysisData);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An error occurred';
       setError(errorMessage);
