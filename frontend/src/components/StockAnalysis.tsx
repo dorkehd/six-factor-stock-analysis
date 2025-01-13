@@ -1,24 +1,24 @@
-import { useState } from 'react';
+import { useState } from 'react'
 
 interface AnalysisData {
-  currentPrice: number;
-  fcfTargetPrice: number;
-  ddmTargetPrice: number;
-  overallScore: number;
+  currentPrice: number
+  fcfTargetPrice: number
+  ddmTargetPrice: number
+  overallScore: number
   factors: {
-    valuation: number;
-    risks: number;
-    unitEconomics: number;
-    customerValue: number;
-    marketSize: number;
-    competition: number;
-  };
+    valuation: number
+    risks: number
+    unitEconomics: number
+    customerValue: number
+    marketSize: number
+    competition: number
+  }
 }
 
 export const StockAnalysis = () => {
-  const [ticker, setTicker] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [ticker, setTicker] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [analysisData, setAnalysisData] = useState<AnalysisData>({
     currentPrice: 0,
     fcfTargetPrice: 0,
@@ -32,27 +32,27 @@ export const StockAnalysis = () => {
       marketSize: 0,
       competition: 0
     }
-  });
+  })
 
   const handleAnalysis = async () => {
-    if (!ticker) return;
+    if (!ticker) return
     
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
     
     try {
-      const response = await fetch(`http://localhost:3001/api/analyze/${ticker}`);
-      if (!response.ok) throw new Error('Analysis failed');
+      const response = await fetch(`http://localhost:3001/api/analyze/${ticker}`)
+      if (!response.ok) throw new Error('Analysis failed')
       
-      const data = await response.json();
-      setAnalysisData(data as AnalysisData);
+      const data = await response.json()
+      setAnalysisData(data as AnalysisData)
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
-      setError(errorMessage);
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred'
+      setError(errorMessage)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="p-4 bg-gray-50 min-h-screen">
@@ -65,8 +65,8 @@ export const StockAnalysis = () => {
         <div className="max-w-xl">
           <form 
             onSubmit={(e) => {
-              e.preventDefault();
-              handleAnalysis();
+              e.preventDefault()
+              handleAnalysis()
             }} 
             className="flex gap-2"
           >
@@ -101,5 +101,5 @@ export const StockAnalysis = () => {
         </div>
       )}
     </div>
-  );
-};
+  )
+}
