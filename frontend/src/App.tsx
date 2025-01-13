@@ -1,4 +1,5 @@
 import type { FC } from 'react';
+import { StockAnalysis } from './components/StockAnalysis';
 
 const App: FC = () => {
   return (
