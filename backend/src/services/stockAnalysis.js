@@ -1,142 +1,118 @@
 const axios = require('axios');
-const NodeCache = require('node-cache');
 
-// Cache setup
-const cache = new NodeCache({ stdTTL: 300 }); // Cache for 5 minutes
-
-async function analyzeStock(ticker) {
+async function getStockData(ticker) {
+  const API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
+  const baseUrl = 'https://www.alphavantage.co/query';
+  
   try {
-    // Check cache first
-    const cachedAnalysis = cache.get(ticker);
-    if (cachedAnalysis) return cachedAnalysis;
-
-    // Fetch data from Alpha Vantage
-    const overview = await fetchStockOverview(ticker);
-    const income = await fetchIncomeStatement(ticker);
-    const balance = await fetchBalanceSheet(ticker);
-    const cashflow = await fetchCashFlow(ticker);
-
-    // Calculate analysis based on the 6-factor framework
-    const analysis = {
-      currentPrice: parseFloat(overview.price),
-      fcfTargetPrice: calculateFCFTargetPrice(cashflow, overview),
-      ddmTargetPrice: calculateDDMTargetPrice(overview),
-      overallScore: 0,
-      factors: {
-        valuation: calculateValuationScore(overview, income),
-        risks: calculateRiskScore(balance, income),
-        unitEconomics: calculateUnitEconomicsScore(income),
-        customerValue: calculateCustomerValueScore(income),
-        marketSize: calculateMarketSizeScore(overview),
-        competition: calculateCompetitionScore(overview, income)
-      }
+    // Get overview data
+    const overviewResponse = await axios.get(`${baseUrl}?function=OVERVIEW&symbol=${ticker}&apikey=${API_KEY}`);
+    
+    // Get income statement data
+    const incomeResponse = await axios.get(`${baseUrl}?function=INCOME_STATEMENT&symbol=${ticker}&apikey=${API_KEY}`);
+    
+    return {
+      overview: overviewResponse.data,
+      income: incomeResponse.data
     };
-
-    // Calculate overall score with weighted factors
-    analysis.overallScore = calculateOverallScore(analysis.factors);
-
-    // Cache the results
-    cache.set(ticker, analysis);
-
-    return analysis;
   } catch (error) {
-    console.error('Analysis error:', error);
-    throw new Error(`Failed to analyze stock: ${error.message}`);
+    console.error('Error fetching stock data:', error);
+    throw new Error('Failed to fetch stock data');
   }
 }
 
-// Alpha Vantage API calls
-async function fetchStockOverview(ticker) {
-  const response = await axios.get(
-    `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${ticker}&apikey=${process.env.ALPHA_VANTAGE_API_KEY}`
-  );
-  return response.data;
-}
+async function analyzeStock(ticker) {
+  const data = await getStockData(ticker);
+  
+  // Calculate factors
+  const customerValue = analyzeCustomerValue(data);
+  const unitEconomics = analyzeUnitEconomics(data);
+  const marketSize = analyzeMarketSize(data);
+  const competition = analyzeCompetition(data);
+  const risks = analyzeRisks(data);
+  const valuation = analyzeValuation(data);
+  
+  // Calculate weighted score
+  const weightedScore = calculateWeightedScore({
+    valuation: { score: valuation, weight: 0.4 },
+    risks: { score: risks, weight: 0.15 },
+    unitEconomics: { score: unitEconomics, weight: 0.15 },
+    customerValue: { score: customerValue, weight: 0.1 },
+    marketSize: { score: marketSize, weight: 0.1 },
+    competition: { score: competition, weight: 0.1 }
+  });
 
-async function fetchIncomeStatement(ticker) {
-  const response = await axios.get(
-    `https://www.alphavantage.co/query?function=INCOME_STATEMENT&symbol=${ticker}&apikey=${process.env.ALPHA_VANTAGE_API_KEY}`
-  );
-  return response.data;
-}
-
-async function fetchBalanceSheet(ticker) {
-  const response = await axios.get(
-    `https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol=${ticker}&apikey=${process.env.ALPHA_VANTAGE_API_KEY}`
-  );
-  return response.data;
-}
-
-async function fetchCashFlow(ticker) {
-  const response = await axios.get(
-    `https://www.alphavantage.co/query?function=CASH_FLOW&symbol=${ticker}&apikey=${process.env.ALPHA_VANTAGE_API_KEY}`
-  );
-  return response.data;
-}
-
-// Analysis calculations
-function calculateFCFTargetPrice(cashflow, overview) {
-  const fcf = parseFloat(cashflow.freeCashFlow);
-  const shares = parseFloat(overview.SharesOutstanding);
-  const growthRate = 0.03; // Conservative growth rate
-  const discountRate = 0.1; // 10% discount rate
-
-  const terminalValue = fcf * (1 + growthRate) / (discountRate - growthRate);
-  return (terminalValue / shares).toFixed(2);
-}
-
-function calculateDDMTargetPrice(overview) {
-  const dividend = parseFloat(overview.DividendPerShare);
-  const growthRate = 0.03;
-  const requiredReturn = 0.09;
-
-  return ((dividend * (1 + growthRate)) / (requiredReturn - growthRate)).toFixed(2);
-}
-
-function calculateOverallScore(factors) {
-  const weights = {
-    valuation: 0.4,
-    risks: 0.15,
-    unitEconomics: 0.15,
-    customerValue: 0.1,
-    marketSize: 0.1,
-    competition: 0.1
+  return {
+    ticker,
+    factors: {
+      customerValue,
+      unitEconomics,
+      marketSize,
+      competition,
+      risks,
+      valuation
+    },
+    weightedScore,
+    recommendation: getRecommendation(weightedScore)
   };
-
-  return Object.entries(factors).reduce((total, [factor, score]) => {
-    return total + (score * weights[factor]);
-  }, 0).toFixed(1);
 }
 
-// Individual factor calculations
-function calculateValuationScore(overview, income) {
-  // Implementation based on the book's valuation metrics
-  return 85; // Placeholder
+function analyzeCustomerValue(data) {
+  // Analyze gross margin trend, revenue growth, and market position
+  const grossMargin = parseFloat(data.overview.GrossProfitTTM) / parseFloat(data.overview.RevenueTTM) * 100;
+  return normalizeScore(grossMargin, 0, 40); // Normalize between 0-100
 }
 
-function calculateRiskScore(balance, income) {
-  // Implementation based on the book's risk assessment
-  return 80; // Placeholder
+function analyzeUnitEconomics(data) {
+  // Analyze profitability metrics
+  const operatingMargin = parseFloat(data.overview.OperatingMarginTTM) * 100;
+  return normalizeScore(operatingMargin, -10, 30);
 }
 
-function calculateUnitEconomicsScore(income) {
-  // Implementation based on the book's unit economics metrics
-  return 75; // Placeholder
+function analyzeMarketSize(data) {
+  // Analyze market cap and industry size
+  const marketCap = parseFloat(data.overview.MarketCapitalization);
+  return normalizeScore(Math.log10(marketCap), 8, 12); // Log scale for market cap
 }
 
-function calculateCustomerValueScore(income) {
-  // Implementation based on the book's customer value metrics
-  return 90; // Placeholder
+function analyzeCompetition(data) {
+  // Analyze competitive position
+  const peRatio = parseFloat(data.overview.PERatio);
+  return normalizeScore(peRatio, 5, 30);
 }
 
-function calculateMarketSizeScore(overview) {
-  // Implementation based on the book's market size assessment
-  return 85; // Placeholder
+function analyzeRisks(data) {
+  // Analyze beta and debt levels
+  const beta = parseFloat(data.overview.Beta);
+  const debtToEquity = parseFloat(data.overview.DebtToEquityRatio);
+  return 100 - normalizeScore((beta + debtToEquity/2), 0.5, 3);
 }
 
-function calculateCompetitionScore(overview, income) {
-  // Implementation based on the book's competition analysis
-  return 70; // Placeholder
+function analyzeValuation(data) {
+  // Analyze various valuation metrics
+  const pe = parseFloat(data.overview.PERatio);
+  const pb = parseFloat(data.overview.PriceToBookRatio);
+  const score = (normalizeScore(pe, 5, 30) + normalizeScore(pb, 0.5, 5)) / 2;
+  return 100 - score; // Invert so lower valuations score higher
+}
+
+function normalizeScore(value, min, max) {
+  const normalized = ((value - min) / (max - min)) * 100;
+  return Math.max(0, Math.min(100, normalized));
+}
+
+function calculateWeightedScore(factors) {
+  return Object.values(factors).reduce((total, factor) => {
+    return total + (factor.score * factor.weight);
+  }, 0);
+}
+
+function getRecommendation(score) {
+  if (score >= 80) return 'Strong Buy';
+  if (score >= 60) return 'Buy';
+  if (score >= 40) return 'Hold';
+  if (score >= 20) return 'Sell';
+  return 'Strong Sell';
 }
 
 module.exports = {
