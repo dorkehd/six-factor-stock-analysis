@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
 
-const StockAnalysis = () => {
+export const StockAnalysis = () => {
   const [ticker, setTicker] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [analysisData, setAnalysisData] = useState({
     currentPrice: 0,
     fcfTargetPrice: 0,
@@ -33,8 +33,9 @@ const StockAnalysis = () => {
       
       const data = await response.json();
       setAnalysisData(data);
-    } catch (err) {
-      setError(err.message);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -89,5 +90,3 @@ const StockAnalysis = () => {
     </div>
   );
 };
-
-export default StockAnalysis;

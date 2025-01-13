@@ -1,5 +1,4 @@
-import React from 'react';
-import StockAnalysis from './components/StockAnalysis';
+import { StockAnalysis } from './components/StockAnalysis';
 
 function App() {
   return (
